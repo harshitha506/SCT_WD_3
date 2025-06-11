@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic-Tac-Toe (Highlight Win)</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 2.5rem;
+      color: #333;
+    }
+
+    #mode-buttons button {
+      margin: 10px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #mode-buttons button:hover {
+      background-color: #45a049;
+    }
+
+    #status {
+      font-size: 1.2rem;
+      margin: 15px;
+      color: #333;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+      max-width: 330px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      font-size: 2.5rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .cell:hover {
+      transform: scale(1.05);
+      background-color: #f0f0f0;
+    }
+
+    .win {
+      background-color: #a5d6a7 !important;
+      color: #2e7d32;
+    }
+
+    #restart {
+      padding: 10px 18px;
+      font-size: 1rem;
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 10px;
+    }
+
+    #restart:hover {
+      background-color: #1976d2;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tic-Tac-Toe</h1>
+  <div id="mode-buttons">
+    <button onclick="startGame('human')">2 Player</button>
+    <button onclick="startGame('computer')">Play vs Computer</button>
+  </div>
+
+  <div id="status">Choose a mode to start the game.</div>
+  <div id="board"></div>
+  <button id="restart" onclick="startGame(currentMode)" style="display:none;">Restart Game</button>
+
+  <script>
+    let board = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let gameActive = false;
+    let currentMode = 'human';
+
+    const winningCombinations = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    function startGame(mode) {
+      board = Array(9).fill(null);
+      currentPlayer = 'X';
+      gameActive = true;
+      currentMode = mode;
+      document.getElementById('status').innerText = `Current Player: ${currentPlayer}`;
+      document.getElementById('restart').style.display = 'inline-block';
+      renderBoard();
+    }
+
+    function renderBoard(highlight = []) {
+      const boardDiv = document.getElementById('board');
+      boardDiv.innerHTML = '';
+      board.forEach((cell, i) => {
+        const cellDiv = document.createElement('div');
+        cellDiv.className = 'cell';
+        if (highlight.includes(i)) cellDiv.classList.add('win');
+        cellDiv.innerText = cell || '';
+        cellDiv.addEventListener('click', () => handleCellClick(i));
+        boardDiv.appendChild(cellDiv);
+      });
+    }
+
+    function handleCellClick(index) {
+      if (!gameActive || board[index]) return;
+
+      board[index] = currentPlayer;
+      renderBoard();
+
+      const winCombo = checkWinner(currentPlayer);
+      if (winCombo) {
+        gameActive = false;
+        renderBoard(winCombo);
+        document.getElementById('status').innerText = `🎉 Player ${currentPlayer} Wins!`;
+        return;
+      }
+
+      if (board.every(cell => cell)) {
+        document.getElementById('status').innerText = '🤝 It\'s a Draw!';
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      document.getElementById('status').innerText = `Current Player: ${currentPlayer}`;
+
+      if (currentMode === 'computer' && currentPlayer === 'O') {
+        setTimeout(() => {
+          const bestMove = getBestMove();
+          handleCellClick(bestMove);
+        }, 300);
+      }
+    }
+
+    function checkWinner(player) {
+      for (const combo of winningCombinations) {
+        if (combo.every(i => board[i] === player)) {
+          return combo; // return winning combination
+        }
+      }
+      return null;
+    }
+
+    function getBestMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < board.length; i++) {
+        if (board[i] === null) {
+          board[i] = 'O';
+          let score = minimax(board, 0, false);
+          board[i] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      return move;
+    }
+
+    function minimax(newBoard, depth, isMaximizing) {
+      if (checkWinner('O')) return 10 - depth;
+      if (checkWinner('X')) return depth - 10;
+      if (newBoard.every(cell => cell !== null)) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < newBoard.length; i++) {
+          if (newBoard[i] === null) {
+            newBoard[i] = 'O';
+            let score = minimax(newBoard, depth + 1, false);
+            newBoard[i] = null;
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < newBoard.length; i++) {
+          if (newBoard[i] === null) {
+            newBoard[i] = 'X';
+            let score = minimax(newBoard, depth + 1, true);
+            newBoard[i] = null;
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+  </script>
+</body>
+</html>
